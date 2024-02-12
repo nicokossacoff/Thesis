@@ -1,3 +1,8 @@
+## Make sure to update the client_id and client_secret variables
+## before running.
+## The API request code may fail - I need to update that part of
+## the code (in Version 1.0.0)
+
 import pandas as pd
 import numpy as np
 import swifter
@@ -5,7 +10,9 @@ from pathlib import Path
 import os
 import base64
 from requests import post, get
-import json 
+import json
+
+version = "1.0.0"
 
 client_id = '1435ba72a607475eab2e2184cabc2777'
 client_secret = '61951b1287e94f91bb4a57c664606e59'
@@ -46,8 +53,8 @@ def main():
     try:
         ## Creates an absolute path to the dataset
         abspath = str(os.getcwd()).split("/")
-        relpath = r"Data/charts.csv"
         abspath = "/".join([i for i in abspath[:-1]])
+        relpath = r"Data/charts.csv"
         path = abspath + "/" + relpath
 
         ## Loads the dataset
@@ -109,6 +116,39 @@ def main():
         ## Maps the track ID in the main DataFrame and appends
         ## the release date
         df["release_date"] = df["track_id"].map(dates.set_index("track_id")["release_date"])
+
+        ## Loads the raw dataset again
+        df2 = pd.read_csv(path)
+        df2.date = pd.to_datetime(df2.date)
+
+        ## Sorts values
+        df2.sort_values(by= ["date", "position"], inplace= True)
+
+        ## Creates the Dummy 2 variable
+        chart_dates = df2.date.unique()
+        previous_date = chart_dates[0]
+        variable = []
+        for date in chart_dates:
+            temp_df = df2.loc[(df2.date == date)]
+            for (index, row) in temp_df.iterrows():
+                if previous_date <= row.release_date <= date:
+                    variable.append(1)
+                else:
+                    variable.append(0)
+            
+            previous_date = date
+
+        df["dummy_2"] = variable
+
+        ## Exports the DataFrame
+        abspath = str(os.getcwd()).split("/")
+        abspath = "/".join([i for i in abspath[:-1]])
+        relpath = r"Data/Dataset.xlsx"
+        path = abspath + "/" + relpath
+        df.to_excel(path, index= False)
     except Exception as error:
         print(error)
         raise
+
+if __name__ == "__name__":
+    main()
